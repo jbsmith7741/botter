@@ -6,8 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"os"
+
 	"github.com/jbsmith7741/botter/apps/discord/bot"
+	"github.com/jbsmith7741/botter/internal/version"
 	"github.com/mediaFORGE/ap-utils/config"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -15,8 +19,16 @@ var (
 )
 
 func main() {
-	c := &bot.Config{}
-	config.New(c).Parse()
+	c := &bot.Config{Email: "",
+		Password: "",
+		RoomId:   ""}
+
+	version.ShowVersion()
+	if err := config.New(c).Parse(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	bot, err := bot.New(c)
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
