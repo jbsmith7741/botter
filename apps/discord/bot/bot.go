@@ -1,8 +1,12 @@
 package bot
 
 import (
-	"github.com/bwmarrin/discordgo"
+	"fmt"
 	"log"
+
+	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 type Config struct {
@@ -12,29 +16,54 @@ type Config struct {
 }
 
 type Bot struct {
-	RoomID string
-	Token string
-	client *discordgo.Session
+	*Config
+	client   *discordgo.Session
+	UserName string
 }
 
 func New(c *Config) (b *Bot, err error) {
-	b = &Bot{RoomID: c.RoomId}
+	b = &Bot{Config: c}
 	b.client, err = discordgo.New(c.Email, c.Password)
-	b.Token = b.client.Token
+	if b.client.Token == "" {
+		return nil, fmt.Errorf("error: could not connect to client with %s", b.Email)
+	}
+
+	b.UserName, _ = b.client.User("@me")
+
 	return b, err
 }
 
+func (b *Bot) Run() {
+	mine := time.NewTicker(310 * time.Second)
+	collect := time.NewTicker(time.Hour)
+	for {
+		select {
+		case <-mine.C:
+			b.Mine()
+		case <-collect.C:
+			b.Collect()
+		}
+	}
+}
 
 func (b *Bot) Mine() {
-	if _, err := b.client.ChannelMessageSend(b.RoomID, "!mine"); err != nil {
-		log.Print("Mine Error")
+	if _, err := b.client.ChannelMessageSend(b.RoomId, "!mine"); err != nil {
+		log.Printf("%v mine error", b.UserName)
+	} else {
+		log.Printf("%v mine\t", b.UserName)
 	}
-	log.Print("mine\t")
-
 }
+
 func (b *Bot) Collect() {
-	if _, err := b.client.ChannelMessageSend(b.RoomID, "!collect"); err != nil {
-		log.Print("Collect Error")
+	if _, err := b.client.ChannelMessageSend(b.RoomId, "!collect"); err != nil {
+		log.Printf("%v collect error", b.UserName)
+	} else {
+		log.Printf("%v collect\n", b.UserName)
 	}
-	log.Print("collect\n")
+}
+
+func (b *Bot) ChangeUserName(name string) {
+	if _, err := b.client.UserUpdate(b.Email, b.Password, name, "", b.Password); err != nil {
+		fmt.Println(err)
+	}
 }
